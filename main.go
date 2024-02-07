@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-  "github.com/slinky55/Milo/token"
+	"github.com/slinky55/Milo/token"
 )
 
 func main() {
@@ -16,16 +16,17 @@ func main() {
 
 	tokenizer, err := NewTokenizer(filename)
 	if err != nil {
-		println("Failed to open file: ")
+		println("Error creating tokenizer: ")
 		println(err.Error())
 		os.Exit(1)
 	}
 
-  for i := 0; i < 10; i++ {
+  for {
     t := tokenizer.NextToken()
     if t.Type == token.EOF {
       break
     }
+
     print("Type: " + t.Type)
     println(" | Literal: " + t.Literal)
   }

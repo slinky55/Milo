@@ -156,6 +156,18 @@ func (t *Tokenizer) NextToken() *token.Token {
       case "let":
         nt.Type = token.LET
         break
+      case "fn": 
+        nt.Type = token.FUNCTION
+        break
+      case "const":
+        nt.Type = token.CONST
+        break
+      case "int":
+        nt.Type = token.INT
+        break
+      case "return":
+        nt.Type = token.RETURN
+        break
       default:
         nt.Type = token.IDENT
       }

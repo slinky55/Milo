@@ -7,11 +7,13 @@ const (
 
 	EOF = "EOF"
 
-  NUMBER = "NUMBER"
+	NUMBER = "NUMBER"
 
 	IDENT = "IDENT"
 
-	INT = "INT"
+	INT = "int"
+
+  STRING = "string"
 
 	ASSIGN = "="
 
@@ -32,10 +34,13 @@ const (
 	FUNCTION = "fn"
 
 	LET = "let"
+
+	CONST = "const"
+
+  RETURN = "return"
 )
 
 type Token struct {
 	Type    Type
 	Literal string
 }
-
