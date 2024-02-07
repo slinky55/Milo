@@ -13,7 +13,7 @@ const (
 
 	INT = "INT"
 
-	ASSIGN = ":="
+	ASSIGN = "="
 
 	PLUS = "+"
 
