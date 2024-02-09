@@ -2,8 +2,6 @@ package main
 
 import (
 	"os"
-
-	"github.com/slinky55/Milo/token"
 )
 
 func main() {
@@ -14,20 +12,16 @@ func main() {
 
 	filename := os.Args[1]
 
-	tokenizer, err := NewTokenizer(filename)
+	lexer, err := NewLexer(filename)
 	if err != nil {
 		println("Error creating tokenizer: ")
 		println(err.Error())
 		os.Exit(1)
 	}
 
-  for {
-    t := tokenizer.NextToken()
-    if t.Type == token.EOF {
-      break
-    }
+  parser := NewParser(lexer) 
+  
+  ast := parser.GenerateAST()
 
-    print("Type: " + t.Type)
-    println(" | Literal: " + t.Literal)
-  }
+  print(ast.Name)
 }

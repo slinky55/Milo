@@ -4,10 +4,10 @@ import (
 	"os"
 	"unicode"
 
-  "github.com/slinky55/Milo/token"
+	"github.com/slinky55/Milo/token"
 )
 
-type Tokenizer struct {
+type Lexer struct {
 	file   string
 	pos    int
 	offset int
@@ -16,13 +16,13 @@ type Tokenizer struct {
 	tokens []token.Token
 }
 
-func NewTokenizer(filename string) (*Tokenizer, error) {
+func NewLexer(filename string) (*Lexer, error) {
 	bytes, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Tokenizer{
+	return &Lexer{
 		file:   string(bytes),
 		pos:    0,
 		offset: 0,
@@ -42,7 +42,7 @@ func isWhitespace(b byte) bool {
   return b == ' ' || b == '\t' || b == '\n' || b == '\r'
 }
 
-func (t *Tokenizer) nextChar() {
+func (t *Lexer) nextChar() {
   t.pos++
   t.offset++
   if t.pos >= len(t.file) {
@@ -51,7 +51,7 @@ func (t *Tokenizer) nextChar() {
   t.curr = t.file[t.pos]
 }
 
-func (t *Tokenizer) NextToken() *token.Token {
+func (t *Lexer) NextToken() *token.Token {
   if t.pos >= len(t.file) {
     return &token.Token{
       Type: token.EOF, 
