@@ -3,7 +3,8 @@ package main
 import (
 	"os"
 
-  "github.com/slinky55/Milo/token"
+  "github.com/slinky55/milo/lexer"
+  "github.com/slinky55/milo/parser"
 )
 
 func main() {
@@ -14,19 +15,14 @@ func main() {
 
 	filename := os.Args[1]
 
-	tokenizer, err := NewTokenizer(filename)
+	lexer, err := lexer.New(filename)
 	if err != nil {
-		println("Failed to open file: ")
+		println("Error creating tokenizer: ")
 		println(err.Error())
 		os.Exit(1)
 	}
 
-  for i := 0; i < 10; i++ {
-    t := tokenizer.NextToken()
-    if t.Type == token.EOF {
-      break
-    }
-    print("Type: " + t.Type)
-    println(" | Literal: " + t.Literal)
-  }
+  parser := parser.New(lexer) 
+  
+  _ = parser.ParseProgram()
 }

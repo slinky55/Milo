@@ -1,3 +1,3 @@
-module github.com/slinky55/Milo
+module github.com/slinky55/milo
 
-go 1.21.4
+go 1.22
