@@ -13,7 +13,7 @@ const (
 
 	INT = "int"
 
-  STRING = "string"
+	STRING = "string"
 
 	ASSIGN = "="
 
@@ -37,7 +37,7 @@ const (
 
 	CONST = "const"
 
-  RETURN = "return"
+	RETURN = "return"
 )
 
 type Token struct {

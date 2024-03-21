@@ -2,6 +2,9 @@ package main
 
 import (
 	"os"
+
+  "github.com/slinky55/milo/lexer"
+  "github.com/slinky55/milo/parser"
 )
 
 func main() {
@@ -12,16 +15,14 @@ func main() {
 
 	filename := os.Args[1]
 
-	lexer, err := NewLexer(filename)
+	lexer, err := lexer.New(filename)
 	if err != nil {
 		println("Error creating tokenizer: ")
 		println(err.Error())
 		os.Exit(1)
 	}
 
-  parser := NewParser(lexer) 
+  parser := parser.New(lexer) 
   
-  ast := parser.GenerateAST()
-
-  print(ast.Name)
+  _ = parser.ParseProgram()
 }
