@@ -1,186 +1,97 @@
 package lexer
 
 import (
-	"os"
-	"unicode"
-
 	"github.com/slinky55/milo/token"
+	"unicode"
 )
 
 type Lexer struct {
-	file   string
-	pos    int
-	offset int
-	curr   byte
-
-	tokens []token.Token
+	input   string
+	charPos int
+	readPos int
+	char    byte
 }
 
-func New(filename string) (*Lexer, error) {
-	bytes, err := os.ReadFile(filename)
-	if err != nil {
-		return nil, err
+func NewLexer(input string) *Lexer {
+	l := &Lexer{
+		input:   input,
+		charPos: 0,
+		readPos: 0,
+		char:    0,
 	}
-
-	return &Lexer{
-		file:   string(bytes),
-		pos:    0,
-		offset: 0,
-		curr:   bytes[0],
-	}, nil
-}
-
-func isAlpha(b byte) bool {
-	return unicode.IsLetter(rune(b))
-}
-
-func isNum(b byte) bool {
-	return unicode.IsDigit(rune(b))
-}
-
-func isWhitespace(b byte) bool {
-	return b == ' ' || b == '\t' || b == '\n' || b == '\r'
-}
-
-func (l *Lexer) nextChar() {
-	l.pos++
-	l.offset++
-	if l.pos >= len(l.file) {
-		return
-	}
-	l.curr = l.file[l.pos]
+	l.advance()
+	return l
 }
 
 func (l *Lexer) NextToken() *token.Token {
-	if l.pos >= len(l.file) {
-		return &token.Token{
-			Type:    token.EOF,
-			Literal: "",
-		}
+	var tk *token.Token
+
+	for l.char == ' ' || l.char == '\t' || l.char == '\n' || l.char == '\r' {
+		l.advance()
 	}
 
-	for isWhitespace(l.curr) {
-		l.nextChar()
-		if l.pos >= len(l.file) {
-			return &token.Token{
-				Type:    token.EOF,
-				Literal: "",
-			}
-		}
-	}
-
-	var nt token.Token
-
-	switch l.curr {
+	switch l.char {
 	case '=':
-		nt = token.Token{
-			Type:    token.ASSIGN,
-			Literal: string(l.curr),
-		}
-		break
+		tk = token.NewToken(token.ASSIGN, string(l.char))
 	case ';':
-		nt = token.Token{
-			Type:    token.SEMICOLON,
-			Literal: string(l.curr),
-		}
-		break
-	case '(':
-		nt = token.Token{
-			Type:    token.LPAREN,
-			Literal: string(l.curr),
-		}
-		break
-	case ')':
-		nt = token.Token{
-			Type:    token.RPAREN,
-			Literal: string(l.curr),
-		}
-		break
+		tk = token.NewToken(token.SEMICOLON, string(l.char))
 	case ',':
-		nt = token.Token{
-			Type:    token.COMMA,
-			Literal: string(l.curr),
-		}
-		break
+		tk = token.NewToken(token.COMMA, string(l.char))
 	case '{':
-		nt = token.Token{
-			Type:    token.LBRACE,
-			Literal: string(l.curr),
-		}
-		break
+		tk = token.NewToken(token.LBRACE, string(l.char))
 	case '}':
-		nt = token.Token{
-			Type:    token.RBRACE,
-			Literal: string(l.curr),
-		}
-		break
+		tk = token.NewToken(token.RBRACE, string(l.char))
+	case '(':
+		tk = token.NewToken(token.LPAREN, string(l.char))
+	case ')':
+		tk = token.NewToken(token.RPAREN, string(l.char))
 	case '+':
-		nt = token.Token{
-			Type:    token.PLUS,
-			Literal: string(l.curr),
-		}
-		break
+		tk = token.NewToken(token.PLUS, string(l.char))
+	case '-':
+		tk = token.NewToken(token.MINUS, string(l.char))
+	case '*':
+		tk = token.NewToken(token.MULTIPLY, string(l.char))
+	case '/':
+		tk = token.NewToken(token.DIVIDE, string(l.char))
 	case 0:
-		return &token.Token{
-			Type:    token.EOF,
-			Literal: string(l.curr),
-		}
+		tk = token.NewToken(token.EOF, "")
 	default:
-		if isNum(l.curr) {
-			for isNum(l.file[l.offset]) {
-				l.offset++
+		if unicode.IsLetter(rune(l.char)) {
+			start := l.charPos
+			for unicode.IsLetter(rune(l.char)) || l.char == '_' {
+				l.advance()
 			}
+			literal := l.input[start:l.charPos]
 
-			lit := l.file[l.pos:l.offset]
-			nt = token.Token{
-				Type:    token.NUMBER,
-				Literal: lit,
+			if t, ok := token.ReservedWords[literal]; ok {
+				tk = token.NewToken(t, literal)
+			} else {
+				tk = token.NewToken(token.IDENT, literal)
 			}
-			l.pos = l.offset
-			l.curr = l.file[l.pos]
-			return &nt
+		} else if unicode.IsNumber(rune(l.char)) {
+			start := l.charPos
+			for unicode.IsNumber(rune(l.char)) {
+				l.advance()
+			}
+			literal := l.input[start:l.charPos]
+
+			tk = token.NewToken(token.NUMBER, literal)
+		} else {
+			tk = token.NewToken(token.ILLEGAL, string(l.char))
 		}
-
-		if isAlpha(l.curr) {
-			for isAlpha(l.file[l.offset]) || isNum(l.file[l.offset]) {
-				l.offset++
-			}
-
-			lit := l.file[l.pos:l.offset]
-			nt.Literal = lit
-			l.pos = l.offset
-			l.curr = l.file[l.pos]
-
-			// reserved word check
-			switch lit {
-			case "let":
-				nt.Type = token.LET
-				break
-			case "fn":
-				nt.Type = token.FUNCTION
-				break
-			case "const":
-				nt.Type = token.CONST
-				break
-			case "int":
-				nt.Type = token.INT
-				break
-			case "return":
-				nt.Type = token.RETURN
-				break
-			default:
-				nt.Type = token.IDENT
-			}
-
-			return &nt
-		}
-
-		nt = token.Token{
-			Type:    token.ILLEGAL,
-			Literal: string(l.curr),
-		}
+		return tk
 	}
 
-	l.nextChar()
-	return &nt
+	l.advance()
+	return tk
+}
+
+func (l *Lexer) advance() {
+	if l.readPos >= len(l.input) {
+		l.char = 0
+	} else {
+		l.char = l.input[l.readPos]
+	}
+	l.charPos = l.readPos
+	l.readPos++
 }

@@ -1,6 +1,0 @@
-let a = 4;
-
-fn foo(int a) int { 
-  int b = a + 5;
-  return b;
-}
