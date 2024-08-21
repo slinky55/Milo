@@ -1,20 +1,15 @@
 package main
 
 import (
-	"fmt"
 	"github.com/slinky55/milo/lexer"
-	"github.com/slinky55/milo/token"
+	"github.com/slinky55/milo/parser"
 )
 
 func main() {
 	input := "let a = 5; var foo = 600;"
-	l := lexer.NewLexer(input)
+	l := lexer.New(input)
 
-	var t *token.Token
-	t = l.NextToken()
+	p := parser.New(l)
 
-	for t.Type != token.EOF {
-		fmt.Printf("Type: %s | Literal: %s\n", t.Type, t.Literal)
-		t = l.NextToken()
-	}
+	p.Parse()
 }

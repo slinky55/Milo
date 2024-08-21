@@ -1,78 +1,138 @@
 package parser
 
 import (
+	"fmt"
 	"github.com/slinky55/milo/ast"
 	"github.com/slinky55/milo/lexer"
 	"github.com/slinky55/milo/token"
+	"strconv"
 )
 
 type Parser struct {
-	lexer *lexer.Lexer
-	curr  *token.Token
-	next  *token.Token
-}
+	l *lexer.Lexer
 
-type ParseError struct {
-	What string
-}
-
-func (pe *ParseError) Error() string {
-	return pe.What
+	cur  *token.Token
+	peek *token.Token
 }
 
 func New(l *lexer.Lexer) *Parser {
-	p := &Parser{
-		lexer: l,
-	}
+	p := &Parser{l: l}
 
-	p.curr = p.lexer.NextToken()
-	p.next = p.lexer.NextToken()
+	p.cur = p.l.NextToken()
+	p.peek = p.l.NextToken()
 
 	return p
 }
 
-func (p *Parser) ParseProgram() *ast.Program {
+func (p *Parser) Parse() *ast.Program {
 	program := &ast.Program{}
 
-	switch p.curr.Type {
-	case token.LET:
-		stmt, err := p.parseLetStmt()
-		if err != nil {
-			print(err.Error())
+	for p.cur.Type != token.EOF {
+		var stmt ast.Statement
+
+		switch p.cur.Type {
+		case token.LET:
+			stmt = p.parseLetStmt()
+		case token.RETURN:
+			stmt = p.parseReturnStmt()
+		}
+
+		if stmt != nil {
+			program.AddStatement(stmt)
+		} else {
 			break
 		}
-		program.Statements = append(program.Statements, stmt)
+		p.next()
 	}
 
 	return program
 }
 
-func (p *Parser) advance() {
-	p.curr = p.next
-	p.next = p.lexer.NextToken()
+func (p *Parser) parseLetStmt() *ast.LetStatement {
+	t := p.cur
+
+	p.next()
+	if p.cur.Type != token.IDENT {
+		p.error(fmt.Sprintf("expected %s, but found %s", token.IDENT, p.cur.Type))
+		return nil
+	}
+	ident := p.parseIdentExpr()
+
+	p.next()
+	if p.cur.Type != token.ASSIGN {
+		p.error(fmt.Sprintf("expected %s, but found %s", token.ASSIGN, p.cur.Type))
+		return nil
+	}
+
+	p.next()
+	expr := p.parseExpr()
+	if expr == nil {
+		return nil
+	}
+
+	p.next()
+	if p.cur.Type != token.SEMICOLON {
+		p.error(fmt.Sprintf("expected %s, but found %s", token.SEMICOLON, p.cur.Type))
+		return nil
+	}
+
+	return &ast.LetStatement{
+		Token: t,
+		Ident: ident,
+		Expr:  expr,
+	}
 }
 
-func (p *Parser) parseLetStmt() (ast.Statement, error) {
-	if p.next.Type != token.IDENT {
-		return nil, &ParseError{
-			What: string("Expected IDENT, found: " + p.next.Type),
-		}
+func (p *Parser) parseReturnStmt() *ast.ReturnStatement {
+	t := p.cur
+	p.next()
+	expr := p.parseExpr()
+	if expr == nil {
+		return nil
 	}
-
-	var stmt ast.LetStatement
-
-	stmt.Token = p.curr
-
-	p.advance()
-
-	if p.next.Type != token.ASSIGN {
-		return nil, &ParseError{
-			What: string("Expected ASSIGN (\"=\"), found: " + p.next.Type),
-		}
+	return &ast.ReturnStatement{
+		Token: t,
+		Expr:  expr,
 	}
+}
 
-	p.advance()
-	p.advance()
+func (p *Parser) parseExpr() ast.Expression {
+	t := p.cur
+	switch t.Type {
+	case token.NUMBER:
+		return p.parseNumberExpr()
+	case token.IDENT:
+		return p.parseIdentExpr()
+	default:
+		p.error("unknown expression")
+		return nil
+	}
+}
 
-	return &stmt, nil
+func (p *Parser) parseIdentExpr() *ast.IdentExpr {
+	return &ast.IdentExpr{
+		Token: p.cur,
+		Value: p.cur.Literal,
+	}
+}
+
+func (p *Parser) parseNumberExpr() *ast.NumberExpr {
+	value, err := strconv.ParseFloat(p.cur.Literal, 64)
+	if err != nil {
+		p.error(err.Error())
+		return nil
+	}
+	return &ast.NumberExpr{
+		Token: p.cur,
+		Value: value,
+	}
+}
+
+func (p *Parser) next() {
+	p.cur = p.peek
+	p.peek = p.l.NextToken()
+}
+
+func (p *Parser) error(msg string) {
+	fmt.Printf("parser error: %s\n", msg)
 }

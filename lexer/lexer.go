@@ -12,7 +12,7 @@ type Lexer struct {
 	char    byte
 }
 
-func NewLexer(input string) *Lexer {
+func New(input string) *Lexer {
 	l := &Lexer{
 		input:   input,
 		charPos: 0,
@@ -32,29 +32,56 @@ func (l *Lexer) NextToken() *token.Token {
 
 	switch l.char {
 	case '=':
-		tk = token.NewToken(token.ASSIGN, string(l.char))
+		if l.peek() == '=' {
+			first := string(l.char)
+			l.advance()
+			literal := first + string(l.char)
+			tk = token.New(token.EQUALS, literal)
+		} else {
+			tk = token.New(token.ASSIGN, string(l.char))
+		}
 	case ';':
-		tk = token.NewToken(token.SEMICOLON, string(l.char))
+		tk = token.New(token.SEMICOLON, string(l.char))
 	case ',':
-		tk = token.NewToken(token.COMMA, string(l.char))
+		tk = token.New(token.COMMA, string(l.char))
 	case '{':
-		tk = token.NewToken(token.LBRACE, string(l.char))
+		tk = token.New(token.LBRACE, string(l.char))
 	case '}':
-		tk = token.NewToken(token.RBRACE, string(l.char))
+		tk = token.New(token.RBRACE, string(l.char))
 	case '(':
-		tk = token.NewToken(token.LPAREN, string(l.char))
+		tk = token.New(token.LPAREN, string(l.char))
 	case ')':
-		tk = token.NewToken(token.RPAREN, string(l.char))
+		tk = token.New(token.RPAREN, string(l.char))
 	case '+':
-		tk = token.NewToken(token.PLUS, string(l.char))
+		tk = token.New(token.PLUS, string(l.char))
 	case '-':
-		tk = token.NewToken(token.MINUS, string(l.char))
+		tk = token.New(token.MINUS, string(l.char))
 	case '*':
-		tk = token.NewToken(token.MULTIPLY, string(l.char))
+		tk = token.New(token.MULTIPLY, string(l.char))
 	case '/':
-		tk = token.NewToken(token.DIVIDE, string(l.char))
+		if l.peek() == '/' {
+			l.advance()
+			for l.peek() != '\n' {
+				l.advance()
+			}
+		} else {
+			tk = token.New(token.DIVIDE, string(l.char))
+		}
+	case '!':
+		if l.peek() == '=' {
+			first := string(l.char)
+			l.advance()
+			literal := first + string(l.char)
+			tk = token.New(token.NOTEQUALS, literal)
+		} else {
+			tk = token.New(token.BANG, string(l.char))
+		}
+	case '<':
+		tk = token.New(token.LTHAN, string(l.char))
+	case '>':
+		tk = token.New(token.GTHAN, string(l.char))
 	case 0:
-		tk = token.NewToken(token.EOF, "")
+		tk = token.New(token.EOF, "")
 	default:
 		if unicode.IsLetter(rune(l.char)) {
 			start := l.charPos
@@ -64,9 +91,9 @@ func (l *Lexer) NextToken() *token.Token {
 			literal := l.input[start:l.charPos]
 
 			if t, ok := token.ReservedWords[literal]; ok {
-				tk = token.NewToken(t, literal)
+				tk = token.New(t, literal)
 			} else {
-				tk = token.NewToken(token.IDENT, literal)
+				tk = token.New(token.IDENT, literal)
 			}
 		} else if unicode.IsNumber(rune(l.char)) {
 			start := l.charPos
@@ -75,9 +102,9 @@ func (l *Lexer) NextToken() *token.Token {
 			}
 			literal := l.input[start:l.charPos]
 
-			tk = token.NewToken(token.NUMBER, literal)
+			tk = token.New(token.NUMBER, literal)
 		} else {
-			tk = token.NewToken(token.ILLEGAL, string(l.char))
+			tk = token.New(token.ILLEGAL, string(l.char))
 		}
 		return tk
 	}
@@ -94,4 +121,12 @@ func (l *Lexer) advance() {
 	}
 	l.charPos = l.readPos
 	l.readPos++
+}
+
+func (l *Lexer) peek() byte {
+	if l.readPos >= len(l.input) {
+		return 0
+	} else {
+		return l.input[l.readPos]
+	}
 }

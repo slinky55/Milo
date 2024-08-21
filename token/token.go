@@ -9,45 +9,59 @@ const (
 
 	IDENT = "IDENT"
 
-	INT = "int"
-
-	FLOAT = "float"
-
-	STRING = "string"
-
-	CHAR = "char"
-
-	FUNCTION = "fn"
-
-	LET = "let"
-
-	VAR = "var"
-
-	RETURN = "return"
-
-	ASSIGN = "="
-
-	PLUS = "+"
-
-	MINUS = "-"
-
-	MULTIPLY = "*"
-
-	DIVIDE = "/"
-
-	COMMA = ","
-
-	SEMICOLON = ";"
-
-	LPAREN = "("
-
-	RPAREN = ")"
-
-	LBRACE = "{"
-
-	RBRACE = "}"
-
 	NUMBER = "NUMBER"
+
+	INT = "INT"
+
+	FLOAT = "FLOAT"
+
+	STRING = "STRING"
+
+	CHAR = "CHAR"
+
+	FUNCTION = "FUNCTION"
+
+	LET = "LET"
+
+	VAR = "VAR"
+
+	RETURN = "RETURN"
+
+	TRUE = "TRUE"
+
+	FALSE = "FALSE"
+
+	ASSIGN = "ASSIGN"
+
+	PLUS = "PLUS"
+
+	MINUS = "MINUS"
+
+	MULTIPLY = "MULTIPLY"
+
+	DIVIDE = "DIVIDE"
+
+	COMMA = "COMMA"
+
+	SEMICOLON = "SEMICOLON"
+
+	LPAREN = "LPAREN"
+
+	RPAREN = "RPAREN"
+
+	LBRACE = "LBRACE"
+
+	RBRACE = "RBRACE"
+
+	BANG = "BANG"
+
+	LTHAN = "LESS THEN"
+
+	GTHAN = "GREATER THEN"
+
+	EQUALS = "EQUALS"
+
+	NOTEQUALS = "NOT EQUALS"
 )
 
 var ReservedWords = map[string]Type{
@@ -59,6 +73,8 @@ var ReservedWords = map[string]Type{
 	"float":  FLOAT,
 	"string": STRING,
 	"char":   CHAR,
+	"true":   TRUE,
+	"false":  FALSE,
 }
 
 type Token struct {
@@ -66,7 +82,7 @@ type Token struct {
 	Literal string
 }
 
-func NewToken(t Type, lit string) *Token {
+func New(t Type, lit string) *Token {
 	return &Token{
 		Type:    t,
 		Literal: lit,
