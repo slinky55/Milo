@@ -8,6 +8,29 @@ import (
 	"strconv"
 )
 
+// Operator precedence
+const (
+	_ int = iota
+	LOWEST
+	EQUALITY
+	COMPARISON
+	SUM
+	PRODUCT
+	PREFIX
+	CALL
+)
+
+var TokenPrecedence = map[token.Type]int{
+	token.EQUALS:    EQUALITY,
+	token.NOTEQUALS: EQUALITY,
+	token.LTHAN:     COMPARISON,
+	token.GTHAN:     COMPARISON,
+	token.PLUS:      SUM,
+	token.MINUS:     SUM,
+	token.MULTIPLY:  PRODUCT,
+	token.DIVIDE:    PRODUCT,
+}
+
 type Parser struct {
 	l *lexer.Lexer
 
@@ -30,6 +53,7 @@ func (p *Parser) Parse() *ast.Program {
 	for p.cur.Type != token.EOF {
 		var stmt ast.Statement
 
+		// TODO: Consider adding expression statements
 		switch p.cur.Type {
 		case token.LET:
 			stmt = p.parseLetStmt()
@@ -42,7 +66,6 @@ func (p *Parser) Parse() *ast.Program {
 		} else {
 			break
 		}
-		p.next()
 	}
 
 	return program
@@ -65,7 +88,7 @@ func (p *Parser) parseLetStmt() *ast.LetStatement {
 	}
 
 	p.next()
-	expr := p.parseExpr()
+	expr := p.parseExpr(LOWEST)
 	if expr == nil {
 		return nil
 	}
@@ -75,6 +98,7 @@ func (p *Parser) parseLetStmt() *ast.LetStatement {
 		p.error(fmt.Sprintf("expected %s, but found %s", token.SEMICOLON, p.cur.Type))
 		return nil
 	}
+	p.next()
 
 	return &ast.LetStatement{
 		Token: t,
@@ -86,25 +110,34 @@ func (p *Parser) parseLetStmt() *ast.LetStatement {
 func (p *Parser) parseReturnStmt() *ast.ReturnStatement {
 	t := p.cur
 	p.next()
-	expr := p.parseExpr()
+	expr := p.parseExpr(LOWEST)
 	if expr == nil {
 		return nil
 	}
+
+	p.next()
+	if p.cur.Type != token.SEMICOLON {
+		p.error(fmt.Sprintf("expected %s, but found %s", token.SEMICOLON, p.cur.Type))
+		return nil
+	}
+	p.next()
+
 	return &ast.ReturnStatement{
 		Token: t,
 		Expr:  expr,
 	}
 }
 
-func (p *Parser) parseExpr() ast.Expression {
-	t := p.cur
-	switch t.Type {
+func (p *Parser) parseExpr(precedence int) ast.Expression {
+	switch p.cur.Type {
+	case token.BANG, token.MINUS, token.INCREMENT, token.DECREMENT:
+		return p.parsePrefixExpr()
 	case token.NUMBER:
 		return p.parseNumberExpr()
 	case token.IDENT:
 		return p.parseIdentExpr()
 	default:
-		p.error("unknown expression")
+		p.error("unknown start of expression")
 		return nil
 	}
 }
@@ -128,9 +161,50 @@ func (p *Parser) parseNumberExpr() *ast.NumberExpr {
 	}
 }
 
+func (p *Parser) parsePrefixExpr() *ast.PrefixExpression {
+	expr := &ast.PrefixExpression{
+		Token:    p.cur,
+		Operator: p.cur.Literal,
+	}
+
+	p.next()
+
+	expr.Right = p.parseExpr(PREFIX)
+
+	return expr
+}
+
+func (p *Parser) parseBinaryExpression(left ast.Expression) *ast.BinaryExpression {
+	expr := &ast.BinaryExpression{
+		Token:    p.cur,
+		Operator: p.cur.Literal,
+		Left:     left,
+	}
+
+	precedence := p.curPrecedence()
+	p.next()
+	expr.Right = p.parseExpr(precedence)
+
+	return expr
+}
+
 func (p *Parser) next() {
 	p.cur = p.peek
 	p.peek = p.l.NextToken()
+}
+
+func (p *Parser) curPrecedence() int {
+	if pr, ok := TokenPrecedence[p.cur.Type]; ok {
+		return pr
+	}
+	return LOWEST
+}
+
+func (p *Parser) peekPrecedence() int {
+	if pr, ok := TokenPrecedence[p.peek.Type]; ok {
+		return pr
+	}
+	return LOWEST
 }
 
 func (p *Parser) error(msg string) {
