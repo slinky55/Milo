@@ -31,11 +31,30 @@ var TokenPrecedence = map[token.Type]int{
 	token.DIVIDE:    PRODUCT,
 }
 
+var BinaryOps = map[token.Type]string{
+	token.MULTIPLY:  "",
+	token.DIVIDE:    "",
+	token.PLUS:      "",
+	token.MINUS:     "",
+	token.EQUALS:    "",
+	token.NOTEQUALS: "",
+	token.GTHAN:     "",
+	token.LTHAN:     "",
+}
+
+var PrefixOps = map[token.Type]string{
+	token.BANG:      "",
+	token.INCREMENT: "",
+	token.DECREMENT: "",
+}
+
 type Parser struct {
 	l *lexer.Lexer
 
 	cur  *token.Token
 	peek *token.Token
+
+	Errors []string
 }
 
 func New(l *lexer.Lexer) *Parser {
@@ -53,12 +72,13 @@ func (p *Parser) Parse() *ast.Program {
 	for p.cur.Type != token.EOF {
 		var stmt ast.Statement
 
-		// TODO: Consider adding expression statements
 		switch p.cur.Type {
 		case token.LET:
 			stmt = p.parseLetStmt()
 		case token.RETURN:
 			stmt = p.parseReturnStmt()
+		default:
+			stmt = p.parseExprStatement()
 		}
 
 		if stmt != nil {
@@ -128,25 +148,58 @@ func (p *Parser) parseReturnStmt() *ast.ReturnStatement {
 	}
 }
 
-func (p *Parser) parseExpr(precedence int) ast.Expression {
-	switch p.cur.Type {
-	case token.BANG, token.MINUS, token.INCREMENT, token.DECREMENT:
-		return p.parsePrefixExpr()
-	case token.NUMBER:
-		return p.parseNumberExpr()
-	case token.IDENT:
-		return p.parseIdentExpr()
-	default:
-		p.error("unknown start of expression")
+func (p *Parser) parseExprStatement() *ast.ExpressionStatement {
+	stmt := &ast.ExpressionStatement{
+		Token: p.cur,
+	}
+
+	stmt.Expr = p.parseExpr(LOWEST)
+	if stmt.Expr == nil {
 		return nil
 	}
+
+	if p.peek.Type == token.SEMICOLON {
+		p.next()
+	}
+
+	p.next()
+
+	return stmt
+}
+
+func (p *Parser) parseExpr(precedence int) ast.Expression {
+	var left ast.Expression
+	switch p.cur.Type {
+	case token.BANG, token.MINUS, token.INCREMENT, token.DECREMENT:
+		left = p.parsePrefixExpr()
+	case token.IDENT:
+		left = p.parseIdentExpr()
+	case token.NUMBER:
+		left = p.parseNumberExpr()
+	default:
+		p.error(fmt.Sprintf("unexpected %s at start of expression", p.cur.Literal))
+		return nil
+	}
+
+	for (p.peek.Type != token.SEMICOLON) && (precedence < p.peekPrecedence()) {
+		if !p.isBinaryOp(p.peek.Type) {
+			return left
+		}
+
+		p.next()
+
+		left = p.parseBinaryExpression(left)
+	}
+
+	return left
 }
 
 func (p *Parser) parseIdentExpr() *ast.IdentExpr {
-	return &ast.IdentExpr{
+	expr := &ast.IdentExpr{
 		Token: p.cur,
 		Value: p.cur.Literal,
 	}
+	return expr
 }
 
 func (p *Parser) parseNumberExpr() *ast.NumberExpr {
@@ -155,10 +208,11 @@ func (p *Parser) parseNumberExpr() *ast.NumberExpr {
 		p.error(err.Error())
 		return nil
 	}
-	return &ast.NumberExpr{
+	expr := &ast.NumberExpr{
 		Token: p.cur,
 		Value: value,
 	}
+	return expr
 }
 
 func (p *Parser) parsePrefixExpr() *ast.PrefixExpression {
@@ -207,6 +261,22 @@ func (p *Parser) peekPrecedence() int {
 	return LOWEST
 }
 
+func (p *Parser) isBinaryOp(t token.Type) bool {
+	if _, ok := BinaryOps[t]; ok {
+		return true
+	}
+	return false
+}
+
+func (p *Parser) isPrefixOp(t token.Type) bool {
+	if _, ok := PrefixOps[t]; ok {
+		return true
+	}
+	return false
+}
+
 func (p *Parser) error(msg string) {
-	fmt.Printf("parser error: %s\n", msg)
+	err := fmt.Sprintf("parser error: %s\n", msg)
+	p.Errors = append(p.Errors, err)
+	println(err)
 }

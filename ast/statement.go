@@ -24,8 +24,8 @@ func (ls *LetStatement) ToString() string {
 	var out strings.Builder
 
 	out.WriteString(ls.Literal())
-	out.WriteString(" ")
-	out.WriteString("=")
+	out.WriteString(" " + ls.Ident.ToString() + " ")
+	out.WriteString("= ")
 
 	if ls.Expr != nil {
 		out.WriteString(ls.Expr.ToString())
@@ -60,3 +60,18 @@ func (rs *ReturnStatement) ToString() string {
 }
 
 func (rs *ReturnStatement) statementNode() { /* EMPTY */ }
+
+type ExpressionStatement struct {
+	Token *token.Token
+	Expr  Expression
+}
+
+func (es *ExpressionStatement) Literal() string {
+	return es.Token.Literal
+}
+
+func (es *ExpressionStatement) ToString() string {
+	return es.Expr.ToString()
+}
+
+func (es *ExpressionStatement) statementNode() { /* EMPTY */ }
