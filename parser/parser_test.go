@@ -197,3 +197,223 @@ func TestBinaryExpressions(t *testing.T) {
 		println(stmt.ToString())
 	}
 }
+
+func TestBooleanExpressions(t *testing.T) {
+	tests := []struct {
+		input    string
+		left     bool
+		operator string
+		right    bool
+	}{
+		{"true == false;", true, "==", false},
+		{"true != false", true, "!=", false},
+	}
+
+	for _, test := range tests {
+		l := lexer.New(test.input)
+		p := New(l)
+		program := p.Parse()
+		if len(p.Errors) > 0 {
+			t.Error("parser had errors")
+			continue
+		}
+
+		if len(program.Statements) != 1 {
+			t.Error("wrong number of statements")
+			continue
+		}
+
+		stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+		if !ok {
+			t.Error("not an expression statement")
+			continue
+		}
+
+		expr, ok := stmt.Expr.(*ast.BinaryExpression)
+		if !ok {
+			t.Error("not a binary expression")
+			continue
+		}
+
+		left, ok := expr.Left.(*ast.BooleanExpr)
+		if !ok {
+			t.Error("not a boolean expression")
+			continue
+		}
+
+		if left.Value != test.left {
+			t.Errorf("expected left value %t, found %t", test.left, left.Value)
+		}
+
+		if expr.Operator != test.operator {
+			t.Errorf("expected operator %s, found %s", test.operator, expr.Operator)
+		}
+
+		right, ok := expr.Right.(*ast.BooleanExpr)
+		if !ok {
+			t.Error("not a boolean expression")
+			continue
+		}
+
+		if right.Value != test.right {
+			t.Errorf("expected right value %t, found %t", test.right, right.Value)
+			continue
+		}
+
+		println(stmt.ToString())
+	}
+}
+
+func TestGroupedExpressions(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"(5 + 3) * 5", "((5 + 3) * 5)"},
+		{"(5 + 3) * 5 * (5 + 3)", "(((5 + 3) * 5) * (5 + 3))"},
+		{"(foo + bar) * bar / foo * (5 + 3)", "((((foo + bar) * bar) / foo) * (5 + 3))"},
+	}
+
+	for _, test := range tests {
+		l := lexer.New(test.input)
+		p := New(l)
+
+		program := p.Parse()
+
+		if len(p.Errors) > 0 {
+			t.Error("parser had errors")
+			continue
+		}
+
+		if len(program.Statements) != 1 {
+			t.Error("wrong number of statements: ", len(program.Statements))
+			continue
+		}
+
+		stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+		if !ok {
+			t.Error("not an expression statement")
+			continue
+		}
+
+		if stmt.ToString() != test.expected {
+			t.Errorf("expected %s, found %s", test.expected, stmt.ToString())
+			continue
+		}
+
+		println(stmt.ToString())
+	}
+}
+
+func TestIfExpression(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"if (5 * 3 == 1) { x } else { y }", "if (((5 * 3) == 1)) { x } else { y }"},
+		{"if (true) { x }", "if (true) { x }"},
+		{"let result = if (5 == 5) { true } else { false };", "let result = if ((5 == 5)) { true } else { false };"},
+	}
+
+	for _, test := range tests {
+		l := lexer.New(test.input)
+		p := New(l)
+
+		program := p.Parse()
+
+		if len(p.Errors) > 0 {
+			t.Error("parser had errors")
+			continue
+		}
+
+		if len(program.Statements) != 1 {
+			t.Error("wrong number of statements: ", len(program.Statements))
+			continue
+		}
+
+		stmt := program.Statements[0]
+
+		if stmt.ToString() != test.expected {
+			t.Errorf("expected %s, found %s", test.expected, stmt.ToString())
+			continue
+		}
+
+		println(stmt.ToString())
+	}
+}
+
+func TestFnExpression(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"let result = fn (x, y) { return x + y; };", "let result = fn (x, y) { return (x + y); };"},
+		{"return fn (x, y) { return x + y; };", "return fn (x, y) { return (x + y); };"},
+		{"fn (foo, bar) { let x = foo; let y = bar; return x + y; }", "fn (foo, bar) { let x = foo;let y = bar;return (x + y); }"},
+	}
+
+	for _, test := range tests {
+		l := lexer.New(test.input)
+		p := New(l)
+
+		program := p.Parse()
+
+		if len(p.Errors) > 0 {
+			t.Error("parser had errors")
+			continue
+		}
+
+		if len(program.Statements) != 1 {
+			t.Error("wrong number of statements: ", len(program.Statements))
+			continue
+		}
+
+		stmt := program.Statements[0]
+
+		if stmt.ToString() != test.expected {
+			t.Errorf("expected %s, found %s", test.expected, stmt.ToString())
+			continue
+		}
+
+		println(stmt.ToString())
+	}
+}
+
+func TestCallExpressions(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"add(2, 3)", "add(2, 3)"},
+		{"add(foo, bar)", "add(foo, bar)"},
+		{"add(foo + 2, bar / 3)", "add((foo + 2), (bar / 3))"},
+		{"add(foo, fn (x, y) { return x + y; })", "add(foo, fn (x, y) { return (x + y); })"},
+	}
+
+	for _, test := range tests {
+		l := lexer.New(test.input)
+		p := New(l)
+
+		program := p.Parse()
+
+		if len(p.Errors) > 0 {
+			t.Error("parser had errors")
+			continue
+		}
+
+		if len(program.Statements) != 1 {
+			t.Error("wrong number of statements: ", len(program.Statements))
+			continue
+		}
+
+		stmt := program.Statements[0]
+
+		if stmt.ToString() != test.expected {
+			t.Errorf("expected %s, found %s", test.expected, stmt.ToString())
+			continue
+		}
+
+		println(stmt.ToString())
+	}
+
+}

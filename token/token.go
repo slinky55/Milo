@@ -31,6 +31,10 @@ const (
 
 	FALSE = "FALSE"
 
+	IF = "IF"
+
+	ELSE = "ELSE"
+
 	ASSIGN = "ASSIGN"
 
 	PLUS = "PLUS"
@@ -79,6 +83,8 @@ var ReservedWords = map[string]Type{
 	"char":   CHAR,
 	"true":   TRUE,
 	"false":  FALSE,
+	"if":     IF,
+	"else":   ELSE,
 }
 
 type Token struct {

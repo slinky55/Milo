@@ -5,7 +5,6 @@ import (
 	"github.com/slinky55/milo/ast"
 	"github.com/slinky55/milo/lexer"
 	"github.com/slinky55/milo/token"
-	"strconv"
 )
 
 // Operator precedence
@@ -29,6 +28,7 @@ var TokenPrecedence = map[token.Type]int{
 	token.MINUS:     SUM,
 	token.MULTIPLY:  PRODUCT,
 	token.DIVIDE:    PRODUCT,
+	token.LPAREN:    CALL,
 }
 
 var BinaryOps = map[token.Type]string{
@@ -40,6 +40,7 @@ var BinaryOps = map[token.Type]string{
 	token.NOTEQUALS: "",
 	token.GTHAN:     "",
 	token.LTHAN:     "",
+	token.LPAREN:    "",
 }
 
 var PrefixOps = map[token.Type]string{
@@ -70,16 +71,7 @@ func (p *Parser) Parse() *ast.Program {
 	program := &ast.Program{}
 
 	for p.cur.Type != token.EOF {
-		var stmt ast.Statement
-
-		switch p.cur.Type {
-		case token.LET:
-			stmt = p.parseLetStmt()
-		case token.RETURN:
-			stmt = p.parseReturnStmt()
-		default:
-			stmt = p.parseExprStatement()
-		}
+		stmt := p.parseStatement()
 
 		if stmt != nil {
 			program.AddStatement(stmt)
@@ -91,33 +83,46 @@ func (p *Parser) Parse() *ast.Program {
 	return program
 }
 
+func (p *Parser) parseStatement() ast.Statement {
+	var stmt ast.Statement
+
+	switch p.cur.Type {
+	case token.LET:
+		stmt = p.parseLetStmt()
+	case token.RETURN:
+		stmt = p.parseReturnStmt()
+	default:
+		stmt = p.parseExprStatement()
+	}
+
+	return stmt
+}
+
 func (p *Parser) parseLetStmt() *ast.LetStatement {
 	t := p.cur
 
-	p.next()
-	if p.cur.Type != token.IDENT {
-		p.error(fmt.Sprintf("expected %s, but found %s", token.IDENT, p.cur.Type))
+	if !p.nextIfPeek(token.IDENT) {
 		return nil
 	}
+
 	ident := p.parseIdentExpr()
 
-	p.next()
-	if p.cur.Type != token.ASSIGN {
-		p.error(fmt.Sprintf("expected %s, but found %s", token.ASSIGN, p.cur.Type))
+	if !p.nextIfPeek(token.ASSIGN) {
 		return nil
 	}
 
 	p.next()
+
 	expr := p.parseExpr(LOWEST)
+
 	if expr == nil {
 		return nil
 	}
 
-	p.next()
-	if p.cur.Type != token.SEMICOLON {
-		p.error(fmt.Sprintf("expected %s, but found %s", token.SEMICOLON, p.cur.Type))
+	if !p.nextIfPeek(token.SEMICOLON) {
 		return nil
 	}
+
 	p.next()
 
 	return &ast.LetStatement{
@@ -137,7 +142,7 @@ func (p *Parser) parseReturnStmt() *ast.ReturnStatement {
 
 	p.next()
 	if p.cur.Type != token.SEMICOLON {
-		p.error(fmt.Sprintf("expected %s, but found %s", token.SEMICOLON, p.cur.Type))
+		p.error("expected %s, but found %s", token.SEMICOLON, p.cur.Type)
 		return nil
 	}
 	p.next()
@@ -167,84 +172,36 @@ func (p *Parser) parseExprStatement() *ast.ExpressionStatement {
 	return stmt
 }
 
-func (p *Parser) parseExpr(precedence int) ast.Expression {
-	var left ast.Expression
-	switch p.cur.Type {
-	case token.BANG, token.MINUS, token.INCREMENT, token.DECREMENT:
-		left = p.parsePrefixExpr()
-	case token.IDENT:
-		left = p.parseIdentExpr()
-	case token.NUMBER:
-		left = p.parseNumberExpr()
-	default:
-		p.error(fmt.Sprintf("unexpected %s at start of expression", p.cur.Literal))
-		return nil
+func (p *Parser) parseStmtBlock() *ast.StatementBlock {
+	block := &ast.StatementBlock{
+		Token: p.cur,
 	}
 
-	for (p.peek.Type != token.SEMICOLON) && (precedence < p.peekPrecedence()) {
-		if !p.isBinaryOp(p.peek.Type) {
-			return left
+	p.next()
+
+	for p.cur.Type != token.RBRACE && p.cur.Type != token.EOF {
+		stmt := p.parseStatement()
+
+		if stmt != nil {
+			block.Statements = append(block.Statements, stmt)
 		}
-
-		p.next()
-
-		left = p.parseBinaryExpression(left)
 	}
 
-	return left
-}
-
-func (p *Parser) parseIdentExpr() *ast.IdentExpr {
-	expr := &ast.IdentExpr{
-		Token: p.cur,
-		Value: p.cur.Literal,
-	}
-	return expr
-}
-
-func (p *Parser) parseNumberExpr() *ast.NumberExpr {
-	value, err := strconv.ParseFloat(p.cur.Literal, 64)
-	if err != nil {
-		p.error(err.Error())
-		return nil
-	}
-	expr := &ast.NumberExpr{
-		Token: p.cur,
-		Value: value,
-	}
-	return expr
-}
-
-func (p *Parser) parsePrefixExpr() *ast.PrefixExpression {
-	expr := &ast.PrefixExpression{
-		Token:    p.cur,
-		Operator: p.cur.Literal,
-	}
-
-	p.next()
-
-	expr.Right = p.parseExpr(PREFIX)
-
-	return expr
-}
-
-func (p *Parser) parseBinaryExpression(left ast.Expression) *ast.BinaryExpression {
-	expr := &ast.BinaryExpression{
-		Token:    p.cur,
-		Operator: p.cur.Literal,
-		Left:     left,
-	}
-
-	precedence := p.curPrecedence()
-	p.next()
-	expr.Right = p.parseExpr(precedence)
-
-	return expr
+	return block
 }
 
 func (p *Parser) next() {
 	p.cur = p.peek
 	p.peek = p.l.NextToken()
+}
+
+func (p *Parser) nextIfPeek(t token.Type) bool {
+	if p.peek.Type != t {
+		p.error("expected %s, but found %s", ")", p.peek.Literal)
+		return false
+	}
+	p.next()
+	return true
 }
 
 func (p *Parser) curPrecedence() int {
@@ -275,8 +232,8 @@ func (p *Parser) isPrefixOp(t token.Type) bool {
 	return false
 }
 
-func (p *Parser) error(msg string) {
-	err := fmt.Sprintf("parser error: %s\n", msg)
+func (p *Parser) error(msg string, args ...any) {
+	err := "parser error: " + fmt.Sprintf(msg, args...)
 	p.Errors = append(p.Errors, err)
-	println(err)
+	//println(err)
 }

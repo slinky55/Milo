@@ -75,3 +75,26 @@ func (es *ExpressionStatement) ToString() string {
 }
 
 func (es *ExpressionStatement) statementNode() { /* EMPTY */ }
+
+type StatementBlock struct {
+	Token      *token.Token
+	Statements []Statement
+}
+
+func (es *StatementBlock) Literal() string {
+	return es.Token.Literal
+}
+
+func (es *StatementBlock) ToString() string {
+	var out strings.Builder
+
+	out.WriteString("{ ")
+	for _, stmt := range es.Statements {
+		out.WriteString(stmt.ToString())
+	}
+	out.WriteString(" }")
+
+	return out.String()
+}
+
+func (es *StatementBlock) statementNode() { /* EMPTY */ }
