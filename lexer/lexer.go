@@ -96,6 +96,16 @@ func (l *Lexer) NextToken() *token.Token {
 		tk = token.New(token.GTHAN, string(l.char))
 	case 0:
 		tk = token.New(token.EOF, "")
+	case '"':
+		l.advance()
+		start := l.charPos
+		for l.char != '"' {
+			l.advance()
+		}
+
+		value := l.input[start:l.charPos]
+
+		tk = token.New(token.STRING, value)
 	default:
 		if unicode.IsLetter(rune(l.char)) {
 			start := l.charPos

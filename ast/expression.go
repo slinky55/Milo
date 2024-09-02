@@ -40,6 +40,21 @@ func (ne *NumberExpr) ToString() string {
 
 func (ne *NumberExpr) expressionNode() { /* EMPTY */ }
 
+type StringExpr struct {
+	Token *token.Token
+	Value string
+}
+
+func (se *StringExpr) Literal() string {
+	return se.Token.Literal
+}
+
+func (se *StringExpr) ToString() string {
+	return se.Literal()
+}
+
+func (se *StringExpr) expressionNode() { /* EMPTY */ }
+
 type PrefixExpression struct {
 	Token    *token.Token
 	Operator string

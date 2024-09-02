@@ -11,13 +11,7 @@ const (
 
 	NUMBER = "NUMBER"
 
-	INT = "INT"
-
-	FLOAT = "FLOAT"
-
 	STRING = "STRING"
-
-	CHAR = "CHAR"
 
 	FUNCTION = "FUNCTION"
 
@@ -34,6 +28,8 @@ const (
 	IF = "IF"
 
 	ELSE = "ELSE"
+
+	NULL = "NULL"
 
 	ASSIGN = "ASSIGN"
 
@@ -77,14 +73,11 @@ var ReservedWords = map[string]Type{
 	"var":    VAR,
 	"return": RETURN,
 	"fn":     FUNCTION,
-	"int":    INT,
-	"float":  FLOAT,
-	"string": STRING,
-	"char":   CHAR,
 	"true":   TRUE,
 	"false":  FALSE,
 	"if":     IF,
 	"else":   ELSE,
+	"null":   NULL,
 }
 
 type Token struct {

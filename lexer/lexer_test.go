@@ -116,10 +116,7 @@ func TestReservedWords(t *testing.T) {
 		token.New(token.VAR, "var"),
 		token.New(token.RETURN, "return"),
 		token.New(token.FUNCTION, "fn"),
-		token.New(token.INT, "int"),
-		token.New(token.FLOAT, "float"),
 		token.New(token.STRING, "string"),
-		token.New(token.CHAR, "char"),
 		token.New(token.TRUE, "true"),
 		token.New(token.FALSE, "false"),
 	}
@@ -259,18 +256,15 @@ func TestMath(t *testing.T) {
 }
 
 func TestFunctionDefinition(t *testing.T) {
-	input := "fn foo(int x, int y) { return x + y; }"
+	input := "fn (x, y) { return x + y; }"
 
 	l := New(input)
 
 	expected := []*token.Token{
 		token.New(token.FUNCTION, "fn"),
-		token.New(token.IDENT, "foo"),
 		token.New(token.LPAREN, "("),
-		token.New(token.INT, "int"),
 		token.New(token.IDENT, "x"),
 		token.New(token.COMMA, ","),
-		token.New(token.INT, "int"),
 		token.New(token.IDENT, "y"),
 		token.New(token.RPAREN, ")"),
 		token.New(token.LBRACE, "{"),
@@ -280,6 +274,36 @@ func TestFunctionDefinition(t *testing.T) {
 		token.New(token.IDENT, "y"),
 		token.New(token.SEMICOLON, ";"),
 		token.New(token.RBRACE, "}"),
+	}
+
+	for _, e := range expected {
+		a := l.NextToken()
+
+		if a.Type != e.Type {
+			t.Errorf("expected type %s, found %s", e.Type, a.Type)
+		}
+
+		if a.Literal != e.Literal {
+			t.Errorf("expected literal %s, found %s", e.Literal, a.Literal)
+		}
+	}
+
+	last := l.NextToken()
+	if last.Type != token.EOF {
+		t.Errorf("expected EOF, found %s", last.Type)
+	}
+}
+
+func TestString(t *testing.T) {
+	input := "let foo = \"bar\";"
+	l := New(input)
+
+	expected := []token.Token{
+		{Type: token.LET, Literal: "let"},
+		{Type: token.IDENT, Literal: "foo"},
+		{Type: token.ASSIGN, Literal: "="},
+		{Type: token.STRING, Literal: "bar"},
+		{Type: token.SEMICOLON, Literal: ";"},
 	}
 
 	for _, e := range expected {

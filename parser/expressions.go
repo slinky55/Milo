@@ -23,6 +23,8 @@ func (p *Parser) parseExpr(precedence int) ast.Expression {
 		left = p.parseFunctionExpr()
 	case token.LPAREN:
 		left = p.parseGroupedExpression()
+	case token.STRING:
+		left = p.parseStringExpr()
 	default:
 		p.error("unexpected %s at start of expression", p.cur.Literal)
 		return nil
@@ -62,6 +64,13 @@ func (p *Parser) parseNumberExpr() *ast.NumberExpr {
 	return &ast.NumberExpr{
 		Token: p.cur,
 		Value: value,
+	}
+}
+
+func (p *Parser) parseStringExpr() *ast.StringExpr {
+	return &ast.StringExpr{
+		Token: p.cur,
+		Value: p.cur.Literal,
 	}
 }
 

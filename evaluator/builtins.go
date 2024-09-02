@@ -9,6 +9,6 @@ var builtins = map[string]Builtin{
 }
 
 func Print(args ...object.Object) object.Object {
-	println(args[0].ToString())
+	println(args[0].Value())
 	return nil
 }
